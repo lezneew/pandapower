@@ -26,7 +26,13 @@ def test_from_jao_with_testfile():
     # line data conversion
     assert np.all((0.01 < net1.line[['r_ohm_per_km', 'x_ohm_per_km']]) & (
         net1.line[['r_ohm_per_km', 'x_ohm_per_km']] < 0.4))
-    assert np.all((0.5 < net1.line['c_nf_per_km']) & (net1.line['c_nf_per_km'] < 25))
+    # The susceptance column is in microsiemens and has to be converted to a
+    # capacitance. Every bus in the test file is at 380 kV, so the result has to
+    # sit in the band of pandapower's own 380 kV standard types (11.0 and 14.6
+    # nF/km). The previous 0.5 .. 25 window admitted the unconverted
+    # susceptance (4.43 nF/km) as well, so it could not tell the two apart.
+    assert np.all((6 < net1.line['c_nf_per_km']) & (net1.line['c_nf_per_km'] < 17))
+    assert np.isclose(net1.line['c_nf_per_km'].iat[0], 14.093, atol=1e-3)
     assert np.all(net1.line['g_us_per_km'] < 1)
     assert np.all((0.2 < net1.line['max_i_ka']) & (net1.line['max_i_ka'] < 5))
 

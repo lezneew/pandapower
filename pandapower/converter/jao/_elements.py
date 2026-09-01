@@ -139,6 +139,10 @@ def create_lines(net: pandapowerNet, data: dict[str, pd.DataFrame],
         x_ohm = _rxb_values(df, schema.reactance_col(),
                             (_schema.ELECTRICAL_PARAMETERS, _schema.REACTANCE))
         b_us = _rxb_values(df, schema.susceptance_col(), None)
+        # The sheets give a susceptance in microsiemens, while
+        # create_lines_from_parameters expects a capacitance in nF/km.
+        # B = 2*pi*f*C, so C[nF] = B[uS] * 1e3 / (2*pi*f).
+        c_nf = 1e3 * b_us / (2 * np.pi * net.f_hz)
 
         if _schema.LINE_IMAX in df.columns:
             i_ka = df[_schema.LINE_IMAX].fillna(max_i_ka_fillna * 1e3).to_numpy() / 1e3
@@ -147,7 +151,7 @@ def create_lines(net: pandapowerNet, data: dict[str, pd.DataFrame],
 
         create_lines_from_parameters(
             net, from_bus, to_bus, length_km,
-            r_ohm / length_km, x_ohm / length_km, b_us / length_km, i_ka,
+            r_ohm / length_km, x_ohm / length_km, c_nf / length_km, i_ka,
             name=schema.string_values("NE name", tokens=["ne", "name"], default=None),
             EIC_Code=schema.string_values("EIC code", tokens=["eic", "code"], default=None),
             TSO=schema.line_tso_array(),
